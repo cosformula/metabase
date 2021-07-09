@@ -5,6 +5,7 @@
             [clojure.test :refer :all]
             [honeysql.core :as hsql]
             [metabase.driver :as driver]
+            [metabase.driver.oracle :as oracle]
             [metabase.driver.sql-jdbc.connection :as sql-jdbc.conn]
             [metabase.driver.sql-jdbc.sync :as sql-jdbc.sync]
             [metabase.driver.sql.query-processor :as sql.qp]
@@ -58,9 +59,13 @@
              :service-name            "MyCoolService"
              :sid                     "ORCL"
              :ssl                     true}]]]
-    (is (= expected-spec
-           (sql-jdbc.conn/connection-details->spec :oracle details))
-        message)))
+    (let [actual-spec (sql-jdbc.conn/connection-details->spec :oracle details)
+          prog-prop   (deref #'oracle/prog-name-property)]
+      (is (= (dissoc expected-spec prog-prop)
+             (dissoc actual-spec prog-prop))
+          message)
+      ;; check our truncated Oracle version of the version/UUID string
+      (is (re-matches #"MB v(.*) [\-a-f0-9]*" (get actual-spec prog-prop))))))
 
 (deftest require-sid-or-service-name-test
   (testing "no SID and no Service Name should throw an exception"
